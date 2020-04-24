@@ -22,11 +22,16 @@ struct _Joystick
 
     // The outputs of the FSM.
     int pushState;
+
+    int x;
+    int y;
+
     bool isTapped;
     bool isTappedRight;
     bool isTappedLeft;
     bool isTappedUp;
     bool isTappedDown;
+
     bool isTiltedRight;
     bool isTiltedLeft;
     bool isTiltedUp;

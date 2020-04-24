@@ -39,6 +39,7 @@ Joystick Joystick_construct()
     joystick.isTappedLeft =  false;
     joystick.isTappedUp = false;
     joystick.isTappedDown = false;
+
     joystick.isTiltedLeft = false;
     joystick.isTiltedRight = false;
     joystick.isTiltedUp = false;
@@ -174,6 +175,38 @@ void refreshJoyStick(Joystick *joystick_p)
     else
     {
         joystick_p->isTappedDown = false;
+    }
+    if (joystick_p->vx < LEFT_THRESHOLD)
+    {
+        joystick_p->isTiltedLeft = true;
+    }
+    else
+    {
+        joystick_p->isTiltedLeft = false;
+    }
+    if (joystick_p->vx > RIGHT_THRESHOLD)
+    {
+        joystick_p->isTiltedRight = true;
+    }
+    else
+    {
+        joystick_p->isTiltedRight = false;
+    }
+    if (joystick_p->vy < LOWER_THRESHOLD)
+    {
+        joystick_p->isTiltedUp = true;
+    }
+    else
+    {
+        joystick_p->isTiltedUp = false;
+    }
+    if (joystick_p->vy > UPPER_THRESHOLD)
+    {
+        joystick_p->isTiltedDown = true;
+    }
+    else
+    {
+        joystick_p->isTiltedDown = false;
     }
 }
 

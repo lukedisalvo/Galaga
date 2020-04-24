@@ -28,6 +28,7 @@ struct _Application
     //The Graphics Structure
     GFX gfx;
     SWTimer Timer;
+    SWTimer Game_Timer;
 
     int state;
     int Health;
@@ -37,6 +38,10 @@ struct _Application
     int back;
     int x;
     int y;
+    int x_old;
+    int y_old;
+    int shield_Pack;
+    int Enemy;
 
 
 
@@ -71,5 +76,12 @@ void Application_returnHome(Application* app, HAL* hal);
 
 void Application_changeScreen(Application* app, HAL* hal);
 
+void Application_moveCharacter(Application* app, HAL* hal);
+
+void Application_SpawnShield(Application* app, HAL* hal);
+
+void Application_Shield(Application* app, HAL* hal);
+
+void Application_SpawnEnemy(Application* app, HAL* hal);
 
 #endif /* APPLICATION_H_ */

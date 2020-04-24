@@ -13,6 +13,13 @@
 #include <HAL/HAL.h>
 #include <HAL/Timer.h>
 #include <HAL/Joystick.h>
+
+#define XMAX 122
+#define XMIN 3
+#define YMIN 20
+#define YMAX 108
+#define MOVESPEED 3
+
 extern tImage GrimReaper8BPP_UNCOMP;
 
 /**
@@ -80,16 +87,24 @@ Application Application_construct()
     // Initialize local application state variables here!
     app.MenuChoice = PLAY_GAME;
     app.firstCall = true;
-    app.Timer = SWTimer_construct(1500);
     app.gfx = GFX_construct(GRAPHICS_COLOR_WHITE, GRAPHICS_COLOR_WHITE);
-    SWTimer_start(&app.Timer);
-    app.state = 0;
 
+    app.Timer = SWTimer_construct(1500);
+    app.Game_Timer = SWTimer_construct(5000);
+
+    SWTimer_start(&app.Timer);
+    SWTimer_start(&app.Game_Timer);
+
+    app.state = 0;
     app.Health = 3;
     app.Diff = 0;
     app.Score = 0;
     app.Shield = 0;
     app.back = 0;
+    app.x = 63;
+    app.y = 63;
+    app.shield_Pack = 0;
+    app.Enemy = 0;
 
     return app;
 }
@@ -142,6 +157,10 @@ void Application_loop(Application* app, HAL* hal)
         Graphics_drawString(&app->gfx.context, "Avatar vs Dangers", -1, 0, 3, false);
         Graphics_drawString(&app->gfx.context, "---------------------------", -1, 0, 10, false);
         Application_Game(app, hal);
+        Application_moveCharacter(app, hal);
+        Application_SpawnShield(app,hal);
+        Application_Shield(app,hal);
+        Application_SpawnEnemy(app, hal);
     }
     //how to play
     else if(app->state == 3)
@@ -238,9 +257,6 @@ void Application_Game(Application* app, HAL* hal)
     sprintf(shield, "P:%02d", app->Shield);
     Graphics_drawString(&app->gfx.context, (int8_t*) shield, -1, 90, 120, false);
 
-    Graphics_setForegroundColor(&app->gfx.context, 0);
-    Graphics_fillCircle(&app->gfx.context, 63, 63, 5);
-
 }
 
 void Application_returnHome(Application* app, HAL* hal)
@@ -258,6 +274,8 @@ void Application_changeScreen(Application* app, HAL* hal)
         case PLAY_GAME:
             Graphics_clearDisplay(&app->gfx.context);
             app->state = 2;
+            SWTimer_start(&app->Timer);
+            SWTimer_start(&app->Game_Timer);
             break;
 
 
@@ -276,4 +294,89 @@ void Application_changeScreen(Application* app, HAL* hal)
 
 }
 
+void Application_moveCharacter(Application* app, HAL* hal)
+{
+    app->x_old = app->x;
+    app->y_old = app->y;
+
+    Graphics_fillCircle(&app->gfx.context, app->x, app->y, 5);
+
+    if(hal->joystick.isTiltedRight)
+    {
+        if (app->x < XMAX)
+        {
+            app->x = app->x + MOVESPEED;
+        }
+    }
+    else if(hal->joystick.isTiltedLeft)
+    {
+        if (app->x > XMIN)
+        {
+            app->x = app->x - MOVESPEED;
+        }
+    }
+    else if(hal->joystick.isTiltedUp)
+    {
+        if (app->y < YMAX)
+        {
+            app->y = app->y + MOVESPEED;
+        }
+    }
+    else if(hal->joystick.isTiltedDown)
+    {
+        if (app->y > YMIN)
+        {
+            app->y = app->y - MOVESPEED;
+        }
+    }
+
+
+    Graphics_setForegroundColor(&app->gfx.context, 16777215);
+    Graphics_fillCircle(&app->gfx.context, app->x_old, app->y_old, 5);
+    Graphics_setForegroundColor(&app->gfx.context, 0);
+    Graphics_fillCircle(&app->gfx.context, app->x, app->y, 5);
+
+
+}
+
+void Application_SpawnShield(Application* app, HAL* hal)
+{
+    if(SWTimer_expired(&app->Game_Timer) && app->shield_Pack == 0)
+    {
+        Graphics_drawCircle(&app->gfx.context, rand()/275, rand()/275, 5);
+        app->shield_Pack++;
+    }
+
+}
+
+void Application_Shield(Application* app, HAL* hal)
+{
+    app->x_old = app->x;
+    app->y_old = app->y;
+
+    if (Button_isPressed(&hal->boosterpackS2))
+    {
+        SWTimer_start(&app->Timer);
+        Graphics_setForegroundColor(&app->gfx.context, 0);
+        Graphics_drawCircle(&app->gfx.context, app->x, app->y, 25);
+        Graphics_setForegroundColor(&app->gfx.context, 16777215);
+        Graphics_drawCircle(&app->gfx.context, app->x_old, app->y_old, 25);
+        if(SWTimer_expired(&app->Timer))
+        {
+            Graphics_setForegroundColor(&app->gfx.context, 16777215);
+            Graphics_drawCircle(&app->gfx.context, app->x, app->y, 25);
+        }
+    }
+}
+
+void Application_SpawnEnemy(Application* app, HAL* hal)
+{
+    if(SWTimer_expired(&app->Game_Timer) && app->Enemy == 0)
+    {
+        Graphics_setForegroundColor(&app->gfx.context, 16711680);
+        Graphics_drawCircle(&app->gfx.context, rand()/300, rand()/300, 5);
+        app->Enemy++;
+    }
+
+}
 
