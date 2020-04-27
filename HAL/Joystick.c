@@ -12,10 +12,19 @@
 #define RELEASED 1
 #define VX_MIDDLE 8000
 #define VY_MIDDLE 8000
-#define LEFT_THRESHOLD  1500
-#define RIGHT_THRESHOLD 10000
-#define UPPER_THRESHOLD 10000
-#define LOWER_THRESHOLD 1500
+#define VX_MIDDLERIGHT 8500
+#define VY_MIDDLEUP 8750
+#define VX_MIDDLELEFT 7500
+#define VY_MIDDLEDOWN 7500
+#define LEFT_THRESHOLD  2500
+#define RIGHT_THRESHOLD 13000
+#define UPPER_THRESHOLD 13000
+#define LOWER_THRESHOLD 2500
+#define MIDDLELEFT_THRESHOLD 5250
+#define MIDDLERIGHT_THRESHOLD 10500
+#define MIDDLEUPPER_THRESHOLD 10500
+#define MIDDLELOWER_THRESHOLD 5250
+
 void initADC();
 void initJoyStick();
 void startADC();
@@ -40,11 +49,20 @@ Joystick Joystick_construct()
     joystick.isTappedUp = false;
     joystick.isTappedDown = false;
 
-    joystick.isTiltedLeft = false;
-    joystick.isTiltedRight = false;
-    joystick.isTiltedUp = false;
-    joystick.isTiltedDown = false;
+    joystick.isTiltedRightMax = false;
+    joystick.isTiltedLeftMax = false;
+    joystick.isTiltedUpMax = false;
+    joystick.isTiltedDownMax = false;
 
+    joystick.isTiltedRightMed = false;
+    joystick.isTiltedLeftMed = false;
+    joystick.isTiltedUpMed = false;
+    joystick.isTiltedDownMed = false;
+
+    joystick.isTiltedRightLow= false;
+    joystick.isTiltedLeftLow = false;
+    joystick.isTiltedUpLow = false;
+    joystick.isTiltedDownLow = false;
 
 
     return joystick;
@@ -176,89 +194,108 @@ void refreshJoyStick(Joystick *joystick_p)
     {
         joystick_p->isTappedDown = false;
     }
+/////////////////////////////////////////////////////////////////////////////////
     if (joystick_p->vx < LEFT_THRESHOLD)
     {
-        joystick_p->isTiltedLeft = true;
+        joystick_p->isTiltedLeftMax = true;
     }
     else
     {
-        joystick_p->isTiltedLeft = false;
+        joystick_p->isTiltedLeftMax = false;
     }
     if (joystick_p->vx > RIGHT_THRESHOLD)
     {
-        joystick_p->isTiltedRight = true;
+        joystick_p->isTiltedRightMax = true;
     }
     else
     {
-        joystick_p->isTiltedRight = false;
+        joystick_p->isTiltedRightMax = false;
     }
     if (joystick_p->vy < LOWER_THRESHOLD)
     {
-        joystick_p->isTiltedUp = true;
+        joystick_p->isTiltedUpMax = true;
     }
     else
     {
-        joystick_p->isTiltedUp = false;
+        joystick_p->isTiltedUpMax = false;
     }
     if (joystick_p->vy > UPPER_THRESHOLD)
     {
-        joystick_p->isTiltedDown = true;
+        joystick_p->isTiltedDownMax = true;
     }
     else
     {
-        joystick_p->isTiltedDown = false;
+        joystick_p->isTiltedDownMax = false;
+    }
+///////////////////////////////////////////////////////////////////////////////
+    if (joystick_p->vx > LEFT_THRESHOLD && joystick_p->vx < MIDDLELEFT_THRESHOLD)
+    {
+        joystick_p->isTiltedLeftMed = true;
+    }
+    else
+    {
+        joystick_p->isTiltedLeftMed = false;
+    }
+    if (joystick_p->vx < RIGHT_THRESHOLD && joystick_p->vx > MIDDLERIGHT_THRESHOLD)
+    {
+        joystick_p->isTiltedRightMed = true;
+    }
+    else
+    {
+        joystick_p->isTiltedRightMed = false;
+    }
+    if (joystick_p->vy < MIDDLELOWER_THRESHOLD && joystick_p->vy > LOWER_THRESHOLD)
+    {
+        joystick_p->isTiltedUpMed = true;
+    }
+    else
+    {
+        joystick_p->isTiltedUpMed = false;
+    }
+    if (joystick_p->vy < UPPER_THRESHOLD && joystick_p->vy > MIDDLEUPPER_THRESHOLD)
+    {
+        joystick_p->isTiltedDownMed = true;
+    }
+    else
+    {
+        joystick_p->isTiltedDownMed = false;
+    }
+ /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    if (joystick_p->vx > MIDDLELEFT_THRESHOLD && joystick_p->vx < VX_MIDDLELEFT)
+    {
+        joystick_p->isTiltedLeftLow = true;
+    }
+    else
+    {
+        joystick_p->isTiltedLeftLow = false;
+    }
+    if (joystick_p->vx < MIDDLERIGHT_THRESHOLD && joystick_p->vx > VX_MIDDLERIGHT)
+    {
+        joystick_p->isTiltedRightLow = true;
+    }
+    else
+    {
+        joystick_p->isTiltedRightLow = false;
+    }
+    if (joystick_p->vy < VY_MIDDLEUP && joystick_p->vy > MIDDLELOWER_THRESHOLD)
+    {
+        joystick_p->isTiltedUpLow = true;
+    }
+    else
+    {
+        joystick_p->isTiltedUpLow = false;
+    }
+    if (joystick_p->vy > VY_MIDDLEDOWN && joystick_p->vy < MIDDLEUPPER_THRESHOLD)
+    {
+        joystick_p->isTiltedDownLow = true;
+    }
+    else
+    {
+        joystick_p->isTiltedDownLow = false;
     }
 }
 
 
-bool isTiltedLeft(Joystick joystick)
-{
-    if (joystick.vx < LEFT_THRESHOLD)
-    {
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-    //this is equivalent to
-    //return(joystick.vx < LEFT_THRESHOLD)
-}
-
-bool isTiltedRight(Joystick joystick)
-{
-    if (joystick.vx > RIGHT_THRESHOLD)
-    {
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-
-}
-bool isTiltedUp(Joystick joystick)
-{
-    if (joystick.vy < LOWER_THRESHOLD)
-    {
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-}
-bool isTiltedDown(Joystick joystick)
-{
-    if (joystick.vy > UPPER_THRESHOLD)
-    {
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-
-}
 
 

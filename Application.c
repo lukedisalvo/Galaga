@@ -18,7 +18,10 @@
 #define XMIN 3
 #define YMIN 20
 #define YMAX 108
-#define MOVESPEED 3
+#define MOVESPEEDMAX 3
+#define MOVESPEEDMED 2
+#define MOVESPEEDLOW 1
+
 
 extern tImage GrimReaper8BPP_UNCOMP;
 
@@ -91,9 +94,10 @@ Application Application_construct()
 
     app.Timer = SWTimer_construct(1500);
     app.Game_Timer = SWTimer_construct(5000);
+    app.Shield_Timer = SWTimer_construct(1500);
+    app.Enemy_Spawn = SWTimer_construct(3000);
 
     SWTimer_start(&app.Timer);
-    SWTimer_start(&app.Game_Timer);
 
     app.state = 0;
     app.Health = 3;
@@ -105,6 +109,14 @@ Application Application_construct()
     app.y = 63;
     app.shield_Pack = 0;
     app.Enemy = 0;
+    app.E_locationx = 0;
+    app.E_locationy = 0;
+    app.S_locationx = 0;
+    app.S_locationy = 0;
+    app.B_locationx = 0;
+    app.B_locationy = 0;
+    app.Shield_Active = false;
+    app.Stop_Attack = false;
 
     return app;
 }
@@ -154,13 +166,18 @@ void Application_loop(Application* app, HAL* hal)
     //play game
     else if(app->state == 2)
     {
-        Graphics_drawString(&app->gfx.context, "Avatar vs Dangers", -1, 0, 3, false);
-        Graphics_drawString(&app->gfx.context, "---------------------------", -1, 0, 10, false);
-        Application_Game(app, hal);
-        Application_moveCharacter(app, hal);
-        Application_SpawnShield(app,hal);
-        Application_Shield(app,hal);
-        Application_SpawnEnemy(app, hal);
+        if (app->Health > 0)
+        {
+            Graphics_drawString(&app->gfx.context, "Avatar vs Dangers", -1, 0, 3, false);
+            Graphics_drawString(&app->gfx.context, "---------------------------", -1, 0, 10, false);
+            Application_Game(app, hal);
+        }
+        else
+        {
+            Graphics_clearDisplay(&app->gfx.context);
+            app->state = 5;
+        }
+
     }
     //how to play
     else if(app->state == 3)
@@ -193,7 +210,10 @@ void Application_loop(Application* app, HAL* hal)
 
 
     }
-
+    else if (app->state == 5)
+    {
+        Application_Death(app, hal);
+    }
 
 }
 
@@ -243,19 +263,24 @@ void Application_Game(Application* app, HAL* hal)
 {
     char health[10];
     sprintf(health, "H:%d", app->Health);
-    Graphics_drawString(&app->gfx.context, (int8_t*) health, -1, 0, 120, false);
+    Graphics_drawString(&app->gfx.context, (int8_t*) health, -1, 0, 120, true);
 
     char diff[10];
     sprintf(diff, "D:%d", app->Diff);
-    Graphics_drawString(&app->gfx.context, (int8_t*) diff, -1, 25, 120, false);
+    Graphics_drawString(&app->gfx.context, (int8_t*) diff, -1, 25, 120, true);
 
     char score[10];
     sprintf(score, "S:%03d", app->Score);
-    Graphics_drawString(&app->gfx.context, (int8_t*) score, -1, 50, 120, false);
+    Graphics_drawString(&app->gfx.context, (int8_t*) score, -1, 50, 120, true);
 
     char shield[10];
     sprintf(shield, "P:%02d", app->Shield);
-    Graphics_drawString(&app->gfx.context, (int8_t*) shield, -1, 90, 120, false);
+    Graphics_drawString(&app->gfx.context, (int8_t*) shield, -1, 90, 120, true);
+
+    Application_moveCharacter(app, hal);
+    Application_SpawnShield(app, hal);
+    Application_SpawnEnemy(app, hal);
+    Application_Hit(app, hal);
 
 }
 
@@ -274,8 +299,8 @@ void Application_changeScreen(Application* app, HAL* hal)
         case PLAY_GAME:
             Graphics_clearDisplay(&app->gfx.context);
             app->state = 2;
-            SWTimer_start(&app->Timer);
             SWTimer_start(&app->Game_Timer);
+            SWTimer_start(&app->Enemy_Spawn);
             break;
 
 
@@ -301,35 +326,107 @@ void Application_moveCharacter(Application* app, HAL* hal)
 
     Graphics_fillCircle(&app->gfx.context, app->x, app->y, 5);
 
-    if(hal->joystick.isTiltedRight)
+    if(hal->joystick.isTiltedRightMax)
     {
         if (app->x < XMAX)
         {
-            app->x = app->x + MOVESPEED;
+            app->x = app->x + MOVESPEEDMAX;
         }
     }
-    else if(hal->joystick.isTiltedLeft)
+    else if(hal->joystick.isTiltedRightMed)
     {
-        if (app->x > XMIN)
+        if (app->x < XMAX)
         {
-            app->x = app->x - MOVESPEED;
+            app->x = app->x + MOVESPEEDMED;
         }
     }
-    else if(hal->joystick.isTiltedUp)
+    else if(hal->joystick.isTiltedRightLow)
     {
-        if (app->y < YMAX)
+        if (app->x < XMAX)
         {
-            app->y = app->y + MOVESPEED;
-        }
-    }
-    else if(hal->joystick.isTiltedDown)
-    {
-        if (app->y > YMIN)
-        {
-            app->y = app->y - MOVESPEED;
+            app->x = app->x + MOVESPEEDLOW;
         }
     }
 
+    if(hal->joystick.isTiltedLeftMax)
+    {
+        if (app->x > XMIN)
+        {
+            app->x = app->x - MOVESPEEDMAX;
+        }
+    }
+    else if(hal->joystick.isTiltedLeftMed)
+    {
+        if (app->x > XMIN)
+        {
+            app->x = app->x - MOVESPEEDMED;
+        }
+    }
+    else if(hal->joystick.isTiltedLeftLow)
+    {
+        if (app->x > XMIN)
+        {
+            app->x = app->x - MOVESPEEDLOW;
+        }
+    }
+    if(hal->joystick.isTiltedUpMax)
+    {
+        if (app->y < YMAX)
+        {
+            app->y = app->y + MOVESPEEDMAX;
+        }
+    }
+    else if(hal->joystick.isTiltedUpMed)
+    {
+        if (app->y < YMAX)
+        {
+            app->y = app->y + MOVESPEEDMED;
+        }
+    }
+    else if(hal->joystick.isTiltedUpLow)
+    {
+        if (app->y < YMAX)
+        {
+            app->y = app->y + MOVESPEEDLOW;
+        }
+    }
+    if(hal->joystick.isTiltedDownMax)
+    {
+        if (app->y > YMIN)
+        {
+            app->y = app->y - MOVESPEEDMAX;
+        }
+    }
+    else if(hal->joystick.isTiltedDownMed)
+    {
+        if (app->y > YMIN)
+        {
+            app->y = app->y - MOVESPEEDMED;
+        }
+    }
+    else if(hal->joystick.isTiltedDownLow)
+    {
+        if (app->y > YMIN)
+        {
+            app->y = app->y - MOVESPEEDLOW;
+        }
+    }
+
+    if (Button_isTapped(&hal->boosterpackS2) && app->Shield > 0)
+    {
+        Application_ShieldOn(app, hal);
+    }
+    if (app->Shield_Active == true)
+    {
+        Graphics_setForegroundColor(&app->gfx.context, 0);
+        Graphics_drawCircle(&app->gfx.context, app->x, app->y, 25);
+        Graphics_setForegroundColor(&app->gfx.context, 16777215);
+        Graphics_drawCircle(&app->gfx.context, app->x_old, app->y_old, 25);
+    }
+    if(SWTimer_expired(&app->Shield_Timer))
+    {
+        Application_ShieldOff(app, hal);
+    }
 
     Graphics_setForegroundColor(&app->gfx.context, 16777215);
     Graphics_fillCircle(&app->gfx.context, app->x_old, app->y_old, 5);
@@ -343,40 +440,98 @@ void Application_SpawnShield(Application* app, HAL* hal)
 {
     if(SWTimer_expired(&app->Game_Timer) && app->shield_Pack == 0)
     {
-        Graphics_drawCircle(&app->gfx.context, rand()/275, rand()/275, 5);
+        int UpperX = XMAX;
+        int LowerX = XMIN;
+        int UpperY = YMAX;
+        int LowerY = YMIN;
+        int numX = (rand() % (UpperX - LowerX + 1)) + LowerX;
+        int numY = (rand() % (UpperY - LowerY + 1)) + LowerY;
+        app->S_locationx = numX;
+        app->S_locationy = numY;
+        Graphics_drawCircle(&app->gfx.context, app->S_locationx, app->S_locationy, 5);
         app->shield_Pack++;
     }
 
 }
 
-void Application_Shield(Application* app, HAL* hal)
+void Application_ShieldOn(Application* app, HAL* hal)
 {
-    app->x_old = app->x;
-    app->y_old = app->y;
+    SWTimer_start(&app->Shield_Timer);
+    app->Shield_Active = true;
+    app->Shield--;
+    app->Stop_Attack = true;
 
-    if (Button_isPressed(&hal->boosterpackS2))
-    {
-        SWTimer_start(&app->Timer);
-        Graphics_setForegroundColor(&app->gfx.context, 0);
-        Graphics_drawCircle(&app->gfx.context, app->x, app->y, 25);
-        Graphics_setForegroundColor(&app->gfx.context, 16777215);
-        Graphics_drawCircle(&app->gfx.context, app->x_old, app->y_old, 25);
-        if(SWTimer_expired(&app->Timer))
-        {
-            Graphics_setForegroundColor(&app->gfx.context, 16777215);
-            Graphics_drawCircle(&app->gfx.context, app->x, app->y, 25);
-        }
-    }
 }
+void Application_ShieldOff(Application* app, HAL* hal)
+{
+    app->Shield_Active = false;
+    if(app->Stop_Attack == true)
+    {
+        Graphics_setForegroundColor(&app->gfx.context, 16777215);
+        Graphics_drawCircle(&app->gfx.context, app->x, app->y, 25);
+
+    }
+    app->Stop_Attack = false;
+}
+
 
 void Application_SpawnEnemy(Application* app, HAL* hal)
 {
-    if(SWTimer_expired(&app->Game_Timer) && app->Enemy == 0)
+    if(SWTimer_expired(&app->Enemy_Spawn) && app->Enemy == 0)
     {
+        int UpperX = XMAX;
+        int LowerX = XMIN;
+        int UpperY = YMAX;
+        int LowerY = YMIN;
+        int numX = (rand() % (UpperX - LowerX + 1)) + LowerX;
+        int numY = (rand() % (UpperY - LowerY + 1)) + LowerY;
+        app->E_locationx = numX;
+        app->E_locationy = numY;
         Graphics_setForegroundColor(&app->gfx.context, 16711680);
-        Graphics_drawCircle(&app->gfx.context, rand()/300, rand()/300, 5);
+        Graphics_drawCircle(&app->gfx.context, app->E_locationx, app->E_locationy, 5);
         app->Enemy++;
     }
 
 }
 
+void Application_Hit(Application* app, HAL* hal)
+{
+    if (((abs(app->x - app->E_locationx )) < 5)  && ((abs(app->y - app->E_locationy))) < 5)
+    {
+        if(app->Health > 0)
+        {
+            app->Health--;
+            Graphics_setForegroundColor(&app->gfx.context, 16777215);
+            Graphics_drawCircle(&app->gfx.context, app->E_locationx, app->E_locationy, 5);
+            app->Enemy--;
+        }
+    }
+    if (((abs(app->x - app->S_locationx )) < 5)  && ((abs(app->y - app->S_locationy))) < 5)
+    {
+        app->Shield++;
+        Graphics_setForegroundColor(&app->gfx.context, 16777215);
+        Graphics_drawCircle(&app->gfx.context, app->S_locationx, app->S_locationy, 5);
+        app->shield_Pack--;
+
+    }
+    if (((abs(app->x - app->E_locationx )) < 25)  && ((abs(app->y - app->E_locationy))) < 25 && (app->Shield_Active == true))
+    {
+        app->Score++;
+        Graphics_setForegroundColor(&app->gfx.context, 16777215);
+        Graphics_drawCircle(&app->gfx.context, app->E_locationx, app->E_locationy, 5);
+        app->Enemy--;
+    }
+
+}
+void Application_Death(Application* app, HAL* hal)
+{
+    Graphics_drawString(&app->gfx.context, "You died", -1, 40, 60, false);
+    Graphics_drawString(&app->gfx.context, "Your score:", -1, 20, 100, false);
+    char score[10];
+    sprintf(score, "%03d", app->Score);
+    Graphics_drawString(&app->gfx.context, (int8_t*) score, -1, 95, 100, true);
+    if (Button_isTapped(&hal->boosterpackJS))
+    {
+        Application_returnHome(app, hal);
+    }
+}

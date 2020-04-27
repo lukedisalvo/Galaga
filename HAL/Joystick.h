@@ -32,10 +32,25 @@ struct _Joystick
     bool isTappedUp;
     bool isTappedDown;
 
-    bool isTiltedRight;
-    bool isTiltedLeft;
-    bool isTiltedUp;
-    bool isTiltedDown;
+    bool isTiltedRightMax;
+    bool isTiltedLeftMax;
+    bool isTiltedUpMax;
+    bool isTiltedDownMax;
+
+    bool isTiltedRightMed;
+    bool isTiltedLeftMed;
+    bool isTiltedUpMed;
+    bool isTiltedDownMed;
+
+    bool isTiltedRightLow;
+    bool isTiltedLeftLow;
+    bool isTiltedUpLow;
+    bool isTiltedDownLow;
+
+
+
+
+
 };
 typedef struct _Joystick Joystick;
 
@@ -48,10 +63,8 @@ bool isTappedDown(Joystick joystick);
 bool isTappedLeft(Joystick joystick);
 bool isTappedRight(Joystick joystick);
 
-bool isTiltedLeft(Joystick joystick);
-bool isTiltedRight(Joystick joystick);
-bool isTiltedUp(Joystick joystick);
-bool isTiltedDown(Joystick joystick);
+
+
 
 #endif /* JOYSTICK_H_ */
 

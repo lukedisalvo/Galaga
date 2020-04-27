@@ -29,6 +29,8 @@ struct _Application
     GFX gfx;
     SWTimer Timer;
     SWTimer Game_Timer;
+    SWTimer Shield_Timer;
+    SWTimer Enemy_Spawn;
 
     int state;
     int Health;
@@ -42,6 +44,15 @@ struct _Application
     int y_old;
     int shield_Pack;
     int Enemy;
+    int S_locationx;
+    int S_locationy;
+    int E_locationx;
+    int E_locationy;
+    int B_locationx;
+    int B_locationy;
+
+    bool Shield_Active;
+    bool Stop_Attack;
 
 
 
@@ -54,14 +65,6 @@ Application Application_construct();
 
 // Called once per super-loop of the main application.
 void Application_loop(Application* app, HAL* hal);
-
-// Called whenever the UART module needs to be updated
-void Application_updateCommunications(Application* app, HAL* hal);
-
-// Interprets an incoming character and echoes back to terminal what kind of
-// character was received (number, letter, or other)
-void Application_interpretIncomingChar(Application* app, HAL* hal);
-
 
 // Generic circular increment function
 uint32_t CircularIncrement(uint32_t value, uint32_t maximum);
@@ -80,8 +83,15 @@ void Application_moveCharacter(Application* app, HAL* hal);
 
 void Application_SpawnShield(Application* app, HAL* hal);
 
-void Application_Shield(Application* app, HAL* hal);
+void Application_ShieldOff(Application* app, HAL* hal);
+
+void Application_ShieldOn(Application* app, HAL* hal);
 
 void Application_SpawnEnemy(Application* app, HAL* hal);
+
+void Application_Hit(Application* app, HAL* hal);
+
+void Application_Death(Application* app, HAL* hal);
+
 
 #endif /* APPLICATION_H_ */
