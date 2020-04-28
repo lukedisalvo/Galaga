@@ -36,6 +36,12 @@ struct _Application
     int Health;
     int Diff;
     int Score;
+    int Highscore1;
+    int Highscore2;
+    int Highscore3;
+    int Highscore4;
+    int Highscore5;
+    int Highscore6;
     int Shield;
     int back;
     int x;
@@ -48,8 +54,7 @@ struct _Application
     int S_locationy;
     int E_locationx;
     int E_locationy;
-    int B_locationx;
-    int B_locationy;
+    int game_Counter;
 
     bool Shield_Active;
     bool Stop_Attack;
@@ -92,6 +97,12 @@ void Application_SpawnEnemy(Application* app, HAL* hal);
 void Application_Hit(Application* app, HAL* hal);
 
 void Application_Death(Application* app, HAL* hal);
+
+void Application_ResetGame(Application* app, HAL* hal);
+
+void Application_HighScores(Application* app, HAL* hal);
+
+void Application_HighScoresChecker(Application* app, HAL* hal);
 
 
 #endif /* APPLICATION_H_ */

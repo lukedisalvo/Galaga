@@ -103,6 +103,12 @@ Application Application_construct()
     app.Health = 3;
     app.Diff = 0;
     app.Score = 0;
+    app.Highscore1 = 0;
+    app.Highscore2 = 0;
+    app.Highscore3 = 0;
+    app.Highscore4 = 0;
+    app.Highscore5 = 0;
+    app.Highscore6 = 0;
     app.Shield = 0;
     app.back = 0;
     app.x = 63;
@@ -113,8 +119,7 @@ Application Application_construct()
     app.E_locationy = 0;
     app.S_locationx = 0;
     app.S_locationy = 0;
-    app.B_locationx = 0;
-    app.B_locationy = 0;
+    app.game_Counter = 0;
     app.Shield_Active = false;
     app.Stop_Attack = false;
 
@@ -175,6 +180,7 @@ void Application_loop(Application* app, HAL* hal)
         else
         {
             Graphics_clearDisplay(&app->gfx.context);
+            app->game_Counter++;
             app->state = 5;
         }
 
@@ -195,14 +201,7 @@ void Application_loop(Application* app, HAL* hal)
     //high scores
     else if(app->state == 4)
     {
-        Graphics_drawString(&app->gfx.context, "High Scores", -1, 0, 0, false);
-        Graphics_drawString(&app->gfx.context, "---------------------------", -1, 0, 10, false);
-        Graphics_drawString(&app->gfx.context, "Score 1: 0 ", -1, 20, 20, false);
-        Graphics_drawString(&app->gfx.context, "Score 2: 0", -1, 20, 30, false);
-        Graphics_drawString(&app->gfx.context, "Score 3: 0", -1, 20, 40, false);
-        Graphics_drawString(&app->gfx.context, "Score 4: 0", -1, 20, 50, false);
-        Graphics_drawString(&app->gfx.context, "Score 5: 0", -1, 20, 60, false);
-        Graphics_drawString(&app->gfx.context, "To main menu: JS ", -1, 20, 70, false);
+        Application_HighScores(app, hal);
         if (Button_isTapped(&hal->boosterpackJS))
         {
             Application_returnHome(app, hal);
@@ -490,6 +489,7 @@ void Application_SpawnEnemy(Application* app, HAL* hal)
         Graphics_setForegroundColor(&app->gfx.context, 16711680);
         Graphics_drawCircle(&app->gfx.context, app->E_locationx, app->E_locationy, 5);
         app->Enemy++;
+        //SWTimer_start(&app->Enemy_Spawn);
     }
 
 }
@@ -525,13 +525,190 @@ void Application_Hit(Application* app, HAL* hal)
 }
 void Application_Death(Application* app, HAL* hal)
 {
+
     Graphics_drawString(&app->gfx.context, "You died", -1, 40, 60, false);
     Graphics_drawString(&app->gfx.context, "Your score:", -1, 20, 100, false);
     char score[10];
     sprintf(score, "%03d", app->Score);
     Graphics_drawString(&app->gfx.context, (int8_t*) score, -1, 95, 100, true);
+
+    Application_HighScoresChecker(app, hal);
+
     if (Button_isTapped(&hal->boosterpackJS))
     {
         Application_returnHome(app, hal);
+        Application_ResetGame(app, hal);
     }
+}
+
+void Application_ResetGame(Application* app, HAL* hal)
+{
+
+    app->Health = 3;
+    app->Diff = 0;
+    app->Score = 0;
+    app->Shield = 0;
+    app->back = 0;
+    app->x = 63;
+    app->y = 63;
+    app->shield_Pack = 0;
+    app->Enemy = 0;
+    app->E_locationx = 0;
+    app->E_locationy = 0;
+    app->S_locationx = 0;
+    app->S_locationy = 0;
+    app->Shield_Active = false;
+    app->Stop_Attack = false;
+}
+
+void Application_HighScores(Application* app, HAL* hal)
+{
+    char score1[10];
+    sprintf(score1, "%03d", app->Highscore1);
+
+    char score2[10];
+    sprintf(score2, "%03d", app->Highscore2);
+
+    char score3[10];
+    sprintf(score3, "%03d", app->Highscore3);
+
+    char score4[10];
+    sprintf(score4, "%03d", app->Highscore4);
+
+    char score5[10];
+    sprintf(score5, "%03d", app->Highscore5);
+
+    Graphics_drawString(&app->gfx.context, "High Scores", -1, 0, 0, false);
+    Graphics_drawString(&app->gfx.context, "---------------------------", -1, 0, 10, false);
+
+    Graphics_drawString(&app->gfx.context, "Score 1:", -1, 20, 20, false);
+    Graphics_drawString(&app->gfx.context, (int8_t*) score1, -1, 70, 20, false);
+
+    Graphics_drawString(&app->gfx.context, "Score 2:", -1, 20, 30, false);
+    Graphics_drawString(&app->gfx.context, (int8_t*) score2, -1, 70, 30, false);
+
+    Graphics_drawString(&app->gfx.context, "Score 3:", -1, 20, 40, false);
+    Graphics_drawString(&app->gfx.context, (int8_t*) score3, -1, 70, 40, false);
+
+    Graphics_drawString(&app->gfx.context, "Score 4:", -1, 20, 50, false);
+    Graphics_drawString(&app->gfx.context, (int8_t*) score4, -1, 70, 50, false);
+
+    Graphics_drawString(&app->gfx.context, "Score 5:", -1, 20, 60, false);
+    Graphics_drawString(&app->gfx.context, (int8_t*) score5, -1, 70, 60, false);
+
+    Graphics_drawString(&app->gfx.context, "To main menu: JS ", -1, 20, 70, false);
+}
+
+void Application_HighScoresChecker(Application* app, HAL* hal)
+{
+    if(app->game_Counter == 1)
+    {
+        app->Highscore1 = app->Score;
+    }
+
+    if(app->game_Counter == 2)
+    {
+        if (app->Score > app->Highscore1)
+        {
+            app->Highscore2 = app->Highscore1;
+            app->Highscore1 = app->Score;
+        }
+        else if(app->Score < app->Highscore1)
+        {
+            app->Highscore1 = app->Highscore1;
+            app->Highscore2 = app->Score;
+        }
+    }
+
+    if(app->game_Counter == 3)
+    {
+        if(app->Score > app->Highscore1)
+        {
+            app->Highscore2 = app->Highscore1;
+            app->Highscore3 = app->Highscore2;
+            app->Highscore1 = app->Score;
+
+        }
+        else if((app->Score > app->Highscore2) && (app->Score < app->Highscore1))
+        {
+            app->Highscore1 = app->Highscore1;
+            app->Highscore3 = app->Highscore2;
+            app->Highscore2 = app->Score;
+        }
+        else if(app->Score < app->Highscore2)
+        {
+            app->Highscore3 = app->Score;
+        }
+    }
+
+    if(app->game_Counter == 4)
+    {
+        if(app->Score > app->Highscore1)
+        {
+            app->Highscore2 = app->Highscore1;
+            app->Highscore3 = app->Highscore2;
+            app->Highscore4 = app->Highscore3;
+            app->Highscore1 = app->Score;
+        }
+        else if((app->Score > app->Highscore2) && (app->Score < app->Highscore1))
+        {
+            app->Highscore1 = app->Highscore1;
+            app->Highscore3 = app->Highscore2;
+            app->Highscore4 = app->Highscore3;
+            app->Highscore2 = app->Score;
+        }
+        else if((app->Score > app->Highscore3) && (app->Score < app->Highscore2))
+        {
+            app->Highscore1 = app->Highscore1;
+            app->Highscore2 = app->Highscore2;
+            app->Highscore4 = app->Highscore3;
+            app->Highscore3 = app->Score;
+        }
+        else if (app->Score < app->Highscore3)
+        {
+            app->Highscore4 = app->Score;
+        }
+    }
+
+    else if(app->game_Counter == 5)
+    {
+        if(app->Score > app->Highscore1)
+        {
+            app->Highscore2 = app->Highscore1;
+            app->Highscore3 = app->Highscore2;
+            app->Highscore4 = app->Highscore3;
+            app->Highscore5 = app->Highscore4;
+            app->Highscore1 = app->Score;
+        }
+        else if((app->Score > app->Highscore2) && (app->Score < app->Highscore1))
+        {
+            app->Highscore1 = app->Highscore1;
+            app->Highscore3 = app->Highscore2;
+            app->Highscore4 = app->Highscore3;
+            app->Highscore5 = app->Highscore4;
+            app->Highscore2 = app->Score;
+        }
+        else if((app->Score > app->Highscore3) && (app->Score < app->Highscore2))
+        {
+            app->Highscore1 = app->Highscore1;
+            app->Highscore2 = app->Highscore2;
+            app->Highscore4 = app->Highscore3;
+            app->Highscore5 = app->Highscore4;
+            app->Highscore3 = app->Score;
+        }
+        else if((app->Score > app->Highscore4) && (app->Score < app->Highscore3))
+        {
+            app->Highscore1 = app->Highscore1;
+            app->Highscore2 = app->Highscore2;
+            app->Highscore3 = app->Highscore3;
+            app->Highscore5 = app->Highscore4;
+            app->Highscore4 = app->Score;
+        }
+        else if (app->Score < app->Highscore4)
+        {
+            app->Highscore5 = app->Score;
+        }
+    }
+
+
 }
