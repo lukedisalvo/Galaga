@@ -41,7 +41,6 @@ struct _Application
     int Highscore3;
     int Highscore4;
     int Highscore5;
-    int Highscore6;
     int Shield;
     int back;
     int x;
@@ -55,9 +54,17 @@ struct _Application
     int E_locationx;
     int E_locationy;
     int game_Counter;
+    int a;
+    int b;
+    int c;
+    int d;
+    int e;
+
 
     bool Shield_Active;
     bool Stop_Attack;
+    bool Enemy_Active;
+    bool ShieldPack_Active;
 
 
 
@@ -102,7 +109,8 @@ void Application_ResetGame(Application* app, HAL* hal);
 
 void Application_HighScores(Application* app, HAL* hal);
 
-void Application_HighScoresChecker(Application* app, HAL* hal);
+void Application_HighScoreChecker(Application* app, HAL* hal);
+
 
 
 #endif /* APPLICATION_H_ */

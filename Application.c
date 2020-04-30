@@ -24,6 +24,8 @@
 
 
 extern tImage GrimReaper8BPP_UNCOMP;
+extern tImage Spaceship8BPP_UNCOMP;
+extern tImage Enemy8BPP_UNCOMP;
 
 /**
  * The main entry point of your project. The main function should immediately
@@ -103,12 +105,6 @@ Application Application_construct()
     app.Health = 3;
     app.Diff = 0;
     app.Score = 0;
-    app.Highscore1 = 0;
-    app.Highscore2 = 0;
-    app.Highscore3 = 0;
-    app.Highscore4 = 0;
-    app.Highscore5 = 0;
-    app.Highscore6 = 0;
     app.Shield = 0;
     app.back = 0;
     app.x = 63;
@@ -119,10 +115,21 @@ Application Application_construct()
     app.E_locationy = 0;
     app.S_locationx = 0;
     app.S_locationy = 0;
-    app.game_Counter = 0;
+    app.Highscore1 = 0;
+    app.Highscore2 = 0;
+    app.Highscore3 = 0;
+    app.Highscore4 = 0;
+    app.Highscore5 = 0;
     app.Shield_Active = false;
     app.Stop_Attack = false;
+    app.Enemy_Active = false;
+    app.ShieldPack_Active = false;
 
+    app.a = 0;
+    app.b = 0;
+    app.c = 0;
+    app.d = 0;
+    app.e = 0;
     return app;
 }
 
@@ -180,7 +187,6 @@ void Application_loop(Application* app, HAL* hal)
         else
         {
             Graphics_clearDisplay(&app->gfx.context);
-            app->game_Counter++;
             app->state = 5;
         }
 
@@ -323,6 +329,7 @@ void Application_moveCharacter(Application* app, HAL* hal)
     app->x_old = app->x;
     app->y_old = app->y;
 
+    //Graphics_drawImage(&app->gfx.context, &Spaceship8BPP_UNCOMP, app->x, app->y);
     Graphics_fillCircle(&app->gfx.context, app->x, app->y, 5);
 
     if(hal->joystick.isTiltedRightMax)
@@ -417,7 +424,7 @@ void Application_moveCharacter(Application* app, HAL* hal)
     }
     if (app->Shield_Active == true)
     {
-        Graphics_setForegroundColor(&app->gfx.context, 0);
+        Graphics_setForegroundColor(&app->gfx.context, 255);
         Graphics_drawCircle(&app->gfx.context, app->x, app->y, 25);
         Graphics_setForegroundColor(&app->gfx.context, 16777215);
         Graphics_drawCircle(&app->gfx.context, app->x_old, app->y_old, 25);
@@ -432,13 +439,19 @@ void Application_moveCharacter(Application* app, HAL* hal)
     Graphics_setForegroundColor(&app->gfx.context, 0);
     Graphics_fillCircle(&app->gfx.context, app->x, app->y, 5);
 
+//    Graphics_setForegroundColor(&app->gfx.context, 16777215);
+//    Graphics_drawImage(&app->gfx.context, &Spaceship8BPP_UNCOMP, app->x_old, app->y_old);
+//    Graphics_setForegroundColor(&app->gfx.context, 0);
+//    Graphics_drawImage(&app->gfx.context, &Spaceship8BPP_UNCOMP, app->x, app->y);
+
 
 }
 
 void Application_SpawnShield(Application* app, HAL* hal)
 {
-    if(SWTimer_expired(&app->Game_Timer) && app->shield_Pack == 0)
+    if(SWTimer_expired(&app->Game_Timer) && app->shield_Pack == 0 && app->ShieldPack_Active == false)
     {
+        app->ShieldPack_Active = true;
         int UpperX = XMAX;
         int LowerX = XMIN;
         int UpperY = YMAX;
@@ -449,6 +462,7 @@ void Application_SpawnShield(Application* app, HAL* hal)
         app->S_locationy = numY;
         Graphics_drawCircle(&app->gfx.context, app->S_locationx, app->S_locationy, 5);
         app->shield_Pack++;
+        SWTimer_start(&app->Game_Timer);
     }
 
 }
@@ -476,8 +490,9 @@ void Application_ShieldOff(Application* app, HAL* hal)
 
 void Application_SpawnEnemy(Application* app, HAL* hal)
 {
-    if(SWTimer_expired(&app->Enemy_Spawn) && app->Enemy == 0)
+    if(SWTimer_expired(&app->Enemy_Spawn) && app->Enemy == 0 && app->Enemy_Active == false)
     {
+        app->Enemy_Active = true;
         int UpperX = XMAX;
         int LowerX = XMIN;
         int UpperY = YMAX;
@@ -488,8 +503,9 @@ void Application_SpawnEnemy(Application* app, HAL* hal)
         app->E_locationy = numY;
         Graphics_setForegroundColor(&app->gfx.context, 16711680);
         Graphics_drawCircle(&app->gfx.context, app->E_locationx, app->E_locationy, 5);
+        //Graphics_drawImage(&app->gfx.context, &Enemy8BPP_UNCOMP, app->E_locationx, app->E_locationy);
         app->Enemy++;
-        //SWTimer_start(&app->Enemy_Spawn);
+        SWTimer_start(&app->Enemy_Spawn);
     }
 
 }
@@ -500,17 +516,23 @@ void Application_Hit(Application* app, HAL* hal)
     {
         if(app->Health > 0)
         {
+            app->Enemy_Active = false;
             app->Health--;
             Graphics_setForegroundColor(&app->gfx.context, 16777215);
             Graphics_drawCircle(&app->gfx.context, app->E_locationx, app->E_locationy, 5);
+            app->E_locationx = 0;
+            app->E_locationy = 0;
             app->Enemy--;
         }
     }
     if (((abs(app->x - app->S_locationx )) < 5)  && ((abs(app->y - app->S_locationy))) < 5)
     {
+        app->ShieldPack_Active = false;
         app->Shield++;
         Graphics_setForegroundColor(&app->gfx.context, 16777215);
         Graphics_drawCircle(&app->gfx.context, app->S_locationx, app->S_locationy, 5);
+        app->S_locationx = 0;
+        app->S_locationy = 0;
         app->shield_Pack--;
 
     }
@@ -519,7 +541,10 @@ void Application_Hit(Application* app, HAL* hal)
         app->Score++;
         Graphics_setForegroundColor(&app->gfx.context, 16777215);
         Graphics_drawCircle(&app->gfx.context, app->E_locationx, app->E_locationy, 5);
+        app->E_locationx = 0;
+        app->E_locationy = 0;
         app->Enemy--;
+        app->Enemy_Active = false;
     }
 
 }
@@ -531,11 +556,9 @@ void Application_Death(Application* app, HAL* hal)
     char score[10];
     sprintf(score, "%03d", app->Score);
     Graphics_drawString(&app->gfx.context, (int8_t*) score, -1, 95, 100, true);
-
-    Application_HighScoresChecker(app, hal);
-
     if (Button_isTapped(&hal->boosterpackJS))
     {
+        Application_HighScoreChecker(app, hal);
         Application_returnHome(app, hal);
         Application_ResetGame(app, hal);
     }
@@ -543,7 +566,6 @@ void Application_Death(Application* app, HAL* hal)
 
 void Application_ResetGame(Application* app, HAL* hal)
 {
-
     app->Health = 3;
     app->Diff = 0;
     app->Score = 0;
@@ -559,10 +581,13 @@ void Application_ResetGame(Application* app, HAL* hal)
     app->S_locationy = 0;
     app->Shield_Active = false;
     app->Stop_Attack = false;
+    app->Enemy_Active = false;
+    app->ShieldPack_Active = false;
 }
 
 void Application_HighScores(Application* app, HAL* hal)
 {
+
     char score1[10];
     sprintf(score1, "%03d", app->Highscore1);
 
@@ -599,116 +624,27 @@ void Application_HighScores(Application* app, HAL* hal)
     Graphics_drawString(&app->gfx.context, "To main menu: JS ", -1, 20, 70, false);
 }
 
-void Application_HighScoresChecker(Application* app, HAL* hal)
+void Application_HighScoreChecker(Application* app, HAL* hal)
 {
-    if(app->game_Counter == 1)
+    static int Highscore[5] = {0,0,0,0,0};
+    int score;
+    score = app->Score;
+    int temp;
+    int i;
+    int n = 5;
+    for(i = 0; i < n; i++)
     {
-        app->Highscore1 = app->Score;
-    }
-
-    if(app->game_Counter == 2)
-    {
-        if (app->Score > app->Highscore1)
+        if (score > Highscore[i])
         {
-            app->Highscore2 = app->Highscore1;
-            app->Highscore1 = app->Score;
-        }
-        else if(app->Score < app->Highscore1)
-        {
-            app->Highscore1 = app->Highscore1;
-            app->Highscore2 = app->Score;
+            temp = Highscore[i];
+            Highscore[i] = score;
+            score = temp;
         }
     }
-
-    if(app->game_Counter == 3)
-    {
-        if(app->Score > app->Highscore1)
-        {
-            app->Highscore2 = app->Highscore1;
-            app->Highscore3 = app->Highscore2;
-            app->Highscore1 = app->Score;
-
-        }
-        else if((app->Score > app->Highscore2) && (app->Score < app->Highscore1))
-        {
-            app->Highscore1 = app->Highscore1;
-            app->Highscore3 = app->Highscore2;
-            app->Highscore2 = app->Score;
-        }
-        else if(app->Score < app->Highscore2)
-        {
-            app->Highscore3 = app->Score;
-        }
-    }
-
-    if(app->game_Counter == 4)
-    {
-        if(app->Score > app->Highscore1)
-        {
-            app->Highscore2 = app->Highscore1;
-            app->Highscore3 = app->Highscore2;
-            app->Highscore4 = app->Highscore3;
-            app->Highscore1 = app->Score;
-        }
-        else if((app->Score > app->Highscore2) && (app->Score < app->Highscore1))
-        {
-            app->Highscore1 = app->Highscore1;
-            app->Highscore3 = app->Highscore2;
-            app->Highscore4 = app->Highscore3;
-            app->Highscore2 = app->Score;
-        }
-        else if((app->Score > app->Highscore3) && (app->Score < app->Highscore2))
-        {
-            app->Highscore1 = app->Highscore1;
-            app->Highscore2 = app->Highscore2;
-            app->Highscore4 = app->Highscore3;
-            app->Highscore3 = app->Score;
-        }
-        else if (app->Score < app->Highscore3)
-        {
-            app->Highscore4 = app->Score;
-        }
-    }
-
-    else if(app->game_Counter == 5)
-    {
-        if(app->Score > app->Highscore1)
-        {
-            app->Highscore2 = app->Highscore1;
-            app->Highscore3 = app->Highscore2;
-            app->Highscore4 = app->Highscore3;
-            app->Highscore5 = app->Highscore4;
-            app->Highscore1 = app->Score;
-        }
-        else if((app->Score > app->Highscore2) && (app->Score < app->Highscore1))
-        {
-            app->Highscore1 = app->Highscore1;
-            app->Highscore3 = app->Highscore2;
-            app->Highscore4 = app->Highscore3;
-            app->Highscore5 = app->Highscore4;
-            app->Highscore2 = app->Score;
-        }
-        else if((app->Score > app->Highscore3) && (app->Score < app->Highscore2))
-        {
-            app->Highscore1 = app->Highscore1;
-            app->Highscore2 = app->Highscore2;
-            app->Highscore4 = app->Highscore3;
-            app->Highscore5 = app->Highscore4;
-            app->Highscore3 = app->Score;
-        }
-        else if((app->Score > app->Highscore4) && (app->Score < app->Highscore3))
-        {
-            app->Highscore1 = app->Highscore1;
-            app->Highscore2 = app->Highscore2;
-            app->Highscore3 = app->Highscore3;
-            app->Highscore5 = app->Highscore4;
-            app->Highscore4 = app->Score;
-        }
-        else if (app->Score < app->Highscore4)
-        {
-            app->Highscore5 = app->Score;
-        }
-    }
-
-
+    app->Highscore1 = Highscore[0];
+    app->Highscore2 = Highscore[1];
+    app->Highscore3 = Highscore[2];
+    app->Highscore4 = Highscore[3];
+    app->Highscore5 = Highscore[4];
 }
+
