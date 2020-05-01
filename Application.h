@@ -31,6 +31,9 @@ struct _Application
     SWTimer Game_Timer;
     SWTimer Shield_Timer;
     SWTimer Enemy_Spawn;
+    SWTimer Special_Attack;
+    SWTimer Special_Attack2;
+    SWTimer attack;
 
     int state;
     int Health;
@@ -54,17 +57,18 @@ struct _Application
     int E_locationx;
     int E_locationy;
     int game_Counter;
-    int a;
-    int b;
-    int c;
-    int d;
-    int e;
+
 
 
     bool Shield_Active;
     bool Stop_Attack;
     bool Enemy_Active;
     bool ShieldPack_Active;
+    bool SpecialAttack_Active;
+    bool SpecialAttack2_Active;
+    bool Stop_SpecialAttack;
+    bool Stop_SpecialAttack2;
+
 
 
 
@@ -110,6 +114,14 @@ void Application_ResetGame(Application* app, HAL* hal);
 void Application_HighScores(Application* app, HAL* hal);
 
 void Application_HighScoreChecker(Application* app, HAL* hal);
+
+void Application_SpecialAttackOff(Application* app, HAL* hal);
+
+void Application_SpecialAttackOn(Application* app, HAL* hal);
+
+void Application_SpecialAttack2On(Application* app, HAL* hal);
+
+void Application_SpecialAttack2Off(Application* app, HAL* hal);
 
 
 

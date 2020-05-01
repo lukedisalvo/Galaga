@@ -14,18 +14,25 @@
 #include <HAL/Timer.h>
 #include <HAL/Joystick.h>
 
-#define XMAX 122
+#define XMAX 108
 #define XMIN 3
 #define YMIN 20
-#define YMAX 108
+#define YMAX 100
 #define MOVESPEEDMAX 3
 #define MOVESPEEDMED 2
 #define MOVESPEEDLOW 1
+#define CENTER 8
 
 
 extern tImage GrimReaper8BPP_UNCOMP;
-extern tImage Spaceship8BPP_UNCOMP;
-extern tImage Enemy8BPP_UNCOMP;
+extern tImage Spaceshipone8BPP_UNCOMP;
+extern tImage SpaceshipReset8BPP_UNCOMP;
+extern tImage Shield8BPP_UNCOMP;
+extern tImage galagabackground8BPP_UNCOMP;
+extern tImage Enemyone8BPP_UNCOMP;
+extern tImage Enemytwo8BPP_UNCOMP;
+extern tImage Enemythree8BPP_UNCOMP;
+extern tImage TitleScreen8BPP_UNCOMP;
 
 /**
  * The main entry point of your project. The main function should immediately
@@ -92,13 +99,15 @@ Application Application_construct()
     // Initialize local application state variables here!
     app.MenuChoice = PLAY_GAME;
     app.firstCall = true;
-    app.gfx = GFX_construct(GRAPHICS_COLOR_WHITE, GRAPHICS_COLOR_WHITE);
+    app.gfx = GFX_construct(GRAPHICS_COLOR_BLACK, GRAPHICS_COLOR_BLACK);
 
     app.Timer = SWTimer_construct(1500);
     app.Game_Timer = SWTimer_construct(5000);
     app.Shield_Timer = SWTimer_construct(1500);
     app.Enemy_Spawn = SWTimer_construct(3000);
-
+    app.Special_Attack = SWTimer_construct(250);
+    app.Special_Attack2 = SWTimer_construct(250);
+    app.attack = SWTimer_construct(250);
     SWTimer_start(&app.Timer);
 
     app.state = 0;
@@ -107,8 +116,8 @@ Application Application_construct()
     app.Score = 0;
     app.Shield = 0;
     app.back = 0;
-    app.x = 63;
-    app.y = 63;
+    app.x = 55;
+    app.y = 55;
     app.shield_Pack = 0;
     app.Enemy = 0;
     app.E_locationx = 0;
@@ -124,12 +133,11 @@ Application Application_construct()
     app.Stop_Attack = false;
     app.Enemy_Active = false;
     app.ShieldPack_Active = false;
+    app.SpecialAttack_Active = false;
+    app.Stop_SpecialAttack = false;
+    app.SpecialAttack2_Active = false;
+    app.Stop_SpecialAttack2 = false;
 
-    app.a = 0;
-    app.b = 0;
-    app.c = 0;
-    app.d = 0;
-    app.e = 0;
     return app;
 }
 
@@ -151,11 +159,11 @@ void Application_loop(Application* app, HAL* hal)
     {
         LED_turnOn(&hal->launchpadLED1);
     }
-    Graphics_setForegroundColor(&app->gfx.context, 0);
+    Graphics_setForegroundColor(&app->gfx.context, 16777215);
     //splash screen
     if(app->state == 0)
     {
-        Graphics_drawImage(&app->gfx.context, &GrimReaper8BPP_UNCOMP, 0, 0);
+        Graphics_drawImage(&app->gfx.context, &TitleScreen8BPP_UNCOMP, 0, 0);
         if(SWTimer_expired(&app->Timer))
         {
             Graphics_clearDisplay(&app->gfx.context);
@@ -170,6 +178,16 @@ void Application_loop(Application* app, HAL* hal)
         Graphics_drawString(&app->gfx.context, "Play Game", -1, 10, 20, false);
         Graphics_drawString(&app->gfx.context, "How to play", -1, 10, 30, false);
         Graphics_drawString(&app->gfx.context, "High Scores", -1, 10, 40, false);
+        Graphics_drawImage(&app->gfx.context, &Enemyone8BPP_UNCOMP, 25, 55);
+        Graphics_drawImage(&app->gfx.context, &Enemytwo8BPP_UNCOMP, 45, 55);
+        Graphics_drawImage(&app->gfx.context, &Enemythree8BPP_UNCOMP, 65, 55);
+        Graphics_drawImage(&app->gfx.context, &Enemyone8BPP_UNCOMP, 85, 55);
+
+        Graphics_drawImage(&app->gfx.context, &Enemytwo8BPP_UNCOMP, 25, 72);
+        Graphics_drawImage(&app->gfx.context, &Enemythree8BPP_UNCOMP, 45, 72);
+        Graphics_drawImage(&app->gfx.context, &Enemyone8BPP_UNCOMP, 64, 72);
+        Graphics_drawImage(&app->gfx.context, &Enemytwo8BPP_UNCOMP, 85, 72);
+        Graphics_drawImage(&app->gfx.context, &Spaceshipone8BPP_UNCOMP, 55, 110);
         Application_Mainmenu(app, hal);
         Application_changeScreen(app, hal);
 
@@ -239,7 +257,7 @@ void Application_Mainmenu(Application* app, HAL* hal)
     {
     case PLAY_GAME:
         Graphics_drawString(&app->gfx.context, ">", -1, 0, 20, false);
-        Graphics_setForegroundColor(&app->gfx.context, 16777215);
+        Graphics_setForegroundColor(&app->gfx.context, 0);
         Graphics_drawString(&app->gfx.context, ">", -1, 0, 30, false);
         Graphics_drawString(&app->gfx.context, ">", -1, 0, 40, false);
 
@@ -247,7 +265,7 @@ void Application_Mainmenu(Application* app, HAL* hal)
 
     case HOW_TO_PLAY:
         Graphics_drawString(&app->gfx.context, ">", -1, 0, 30, false);
-        Graphics_setForegroundColor(&app->gfx.context, 16777215);
+        Graphics_setForegroundColor(&app->gfx.context, 0);
         Graphics_drawString(&app->gfx.context, ">", -1, 0, 20, false);
         Graphics_drawString(&app->gfx.context, ">", -1, 0, 40, false);
 
@@ -255,7 +273,7 @@ void Application_Mainmenu(Application* app, HAL* hal)
 
     case HIGH_SCORES:
         Graphics_drawString(&app->gfx.context, ">", -1, 0, 40, false);
-        Graphics_setForegroundColor(&app->gfx.context, 16777215);
+        Graphics_setForegroundColor(&app->gfx.context, 0);
         Graphics_drawString(&app->gfx.context, ">", -1, 0, 20, false);
         Graphics_drawString(&app->gfx.context, ">", -1, 0, 30, false);
         break;
@@ -281,6 +299,9 @@ void Application_Game(Application* app, HAL* hal)
     char shield[10];
     sprintf(shield, "P:%02d", app->Shield);
     Graphics_drawString(&app->gfx.context, (int8_t*) shield, -1, 90, 120, true);
+
+    Graphics_drawLineH(&app->gfx.context, 0, 127, 115);
+
 
     Application_moveCharacter(app, hal);
     Application_SpawnShield(app, hal);
@@ -329,8 +350,7 @@ void Application_moveCharacter(Application* app, HAL* hal)
     app->x_old = app->x;
     app->y_old = app->y;
 
-    //Graphics_drawImage(&app->gfx.context, &Spaceship8BPP_UNCOMP, app->x, app->y);
-    Graphics_fillCircle(&app->gfx.context, app->x, app->y, 5);
+    Graphics_drawImage(&app->gfx.context, &Spaceshipone8BPP_UNCOMP, app->x, app->y);
 
     if(hal->joystick.isTiltedRightMax)
     {
@@ -425,24 +445,53 @@ void Application_moveCharacter(Application* app, HAL* hal)
     if (app->Shield_Active == true)
     {
         Graphics_setForegroundColor(&app->gfx.context, 255);
-        Graphics_drawCircle(&app->gfx.context, app->x, app->y, 25);
-        Graphics_setForegroundColor(&app->gfx.context, 16777215);
-        Graphics_drawCircle(&app->gfx.context, app->x_old, app->y_old, 25);
+        Graphics_drawCircle(&app->gfx.context, app->x + CENTER, app->y + CENTER, 25);
+        Graphics_setForegroundColor(&app->gfx.context, 0);
+        Graphics_drawCircle(&app->gfx.context, app->x_old + CENTER, app->y_old + CENTER, 25);
     }
     if(SWTimer_expired(&app->Shield_Timer))
     {
         Application_ShieldOff(app, hal);
     }
+    if(Button_isTapped(&hal->boosterpackS1) && app->Shield >= 2)
+    {
+        Application_SpecialAttackOn(app, hal);
+    }
+    if(app->SpecialAttack_Active == true)
+    {
+        Graphics_setForegroundColor(&app->gfx.context, 255);
+        Graphics_drawLineV(&app->gfx.context, app->x + 20 , 20, 120);
+        Graphics_drawLineV(&app->gfx.context, app->x - 5, 20, 120);
+        Graphics_setForegroundColor(&app->gfx.context, 0);
+        Graphics_drawLineV(&app->gfx.context, app->x_old + 20, 20, 120);
+        Graphics_drawLineV(&app->gfx.context, app->x_old - 5, 20, 120);
+        if(SWTimer_expired(&app->Special_Attack))
+        {
+            Application_SpecialAttack2On(app, hal);
+        }
+    }
+    if(SWTimer_expired(&app->Special_Attack))
+    {
+        Application_SpecialAttackOff(app, hal);
 
-    Graphics_setForegroundColor(&app->gfx.context, 16777215);
-    Graphics_fillCircle(&app->gfx.context, app->x_old, app->y_old, 5);
-    Graphics_setForegroundColor(&app->gfx.context, 0);
-    Graphics_fillCircle(&app->gfx.context, app->x, app->y, 5);
+    }
+    if(app->SpecialAttack2_Active == true)
+    {
+        Graphics_setForegroundColor(&app->gfx.context, 255);
+        Graphics_drawLineH(&app->gfx.context, 0, 127, app->y + 20);
+        Graphics_drawLineH(&app->gfx.context, 0, 127, app->y - 5);
+        Graphics_setForegroundColor(&app->gfx.context, 0);
+        Graphics_drawLineH(&app->gfx.context, 0, 127, app->y_old + 20);
+        Graphics_drawLineH(&app->gfx.context, 0, 127, app->y_old - 5);
+    }
+    if(SWTimer_expired(&app->attack))
+    {
+        Application_SpecialAttack2Off(app, hal);
+    }
 
-//    Graphics_setForegroundColor(&app->gfx.context, 16777215);
-//    Graphics_drawImage(&app->gfx.context, &Spaceship8BPP_UNCOMP, app->x_old, app->y_old);
-//    Graphics_setForegroundColor(&app->gfx.context, 0);
-//    Graphics_drawImage(&app->gfx.context, &Spaceship8BPP_UNCOMP, app->x, app->y);
+
+      Graphics_drawImage(&app->gfx.context, &SpaceshipReset8BPP_UNCOMP, app->x_old, app->y_old);
+      Graphics_drawImage(&app->gfx.context, &Spaceshipone8BPP_UNCOMP, app->x, app->y);
 
 
 }
@@ -460,7 +509,7 @@ void Application_SpawnShield(Application* app, HAL* hal)
         int numY = (rand() % (UpperY - LowerY + 1)) + LowerY;
         app->S_locationx = numX;
         app->S_locationy = numY;
-        Graphics_drawCircle(&app->gfx.context, app->S_locationx, app->S_locationy, 5);
+        Graphics_drawImage(&app->gfx.context, &Shield8BPP_UNCOMP, app->S_locationx, app->S_locationy);
         app->shield_Pack++;
         SWTimer_start(&app->Game_Timer);
     }
@@ -480,16 +529,67 @@ void Application_ShieldOff(Application* app, HAL* hal)
     app->Shield_Active = false;
     if(app->Stop_Attack == true)
     {
-        Graphics_setForegroundColor(&app->gfx.context, 16777215);
-        Graphics_drawCircle(&app->gfx.context, app->x, app->y, 25);
-
+        Graphics_setForegroundColor(&app->gfx.context, 0);
+        Graphics_drawCircle(&app->gfx.context, app->x + CENTER, app->y + CENTER, 25);
     }
     app->Stop_Attack = false;
+}
+
+void Application_SpecialAttackOn(Application* app, HAL* hal)
+{
+    SWTimer_start(&app->Special_Attack);
+    app->SpecialAttack_Active = true;
+    app->Shield--;
+    app->Shield--;
+    app->Stop_SpecialAttack = true;
+}
+void Application_SpecialAttack2On(Application* app, HAL* hal)
+{
+    SWTimer_start(&app->attack);
+    app->SpecialAttack2_Active = true;
+    app->Stop_SpecialAttack2 = true;
+}
+
+void Application_SpecialAttackOff(Application* app, HAL* hal)
+{
+    app->SpecialAttack_Active = false;
+    if(app->Stop_SpecialAttack == true)
+    {
+        Graphics_setForegroundColor(&app->gfx.context, 0);
+        Graphics_drawLineV(&app->gfx.context, app->x + 20, 10, 120);
+        Graphics_drawLineV(&app->gfx.context, app->x - 5, 10, 120);
+    }
+    app->Stop_SpecialAttack = false;
+}
+void Application_SpecialAttack2Off(Application* app, HAL* hal)
+{
+    app->SpecialAttack2_Active = false;
+    if(app->Stop_SpecialAttack2 == true)
+    {
+        Graphics_setForegroundColor(&app->gfx.context, 0);
+        Graphics_drawLineH(&app->gfx.context, 0, 127, app->y + 20);
+        Graphics_drawLineH(&app->gfx.context, 0, 127, app->y - 5);
+    }
+    app->Stop_SpecialAttack2 = false;
 }
 
 
 void Application_SpawnEnemy(Application* app, HAL* hal)
 {
+    tImage Image;
+    int x = rand();
+    if(x > 21000)
+    {
+        Image = Enemyone8BPP_UNCOMP;
+    }
+    else if (x < 21000 && x > 10500)
+    {
+        Image = Enemytwo8BPP_UNCOMP;
+    }
+    else
+    {
+        Image = Enemythree8BPP_UNCOMP;
+    }
     if(SWTimer_expired(&app->Enemy_Spawn) && app->Enemy == 0 && app->Enemy_Active == false)
     {
         app->Enemy_Active = true;
@@ -501,9 +601,7 @@ void Application_SpawnEnemy(Application* app, HAL* hal)
         int numY = (rand() % (UpperY - LowerY + 1)) + LowerY;
         app->E_locationx = numX;
         app->E_locationy = numY;
-        Graphics_setForegroundColor(&app->gfx.context, 16711680);
-        Graphics_drawCircle(&app->gfx.context, app->E_locationx, app->E_locationy, 5);
-        //Graphics_drawImage(&app->gfx.context, &Enemy8BPP_UNCOMP, app->E_locationx, app->E_locationy);
+        Graphics_drawImage(&app->gfx.context, &Image, app->E_locationx, app->E_locationy);
         app->Enemy++;
         SWTimer_start(&app->Enemy_Spawn);
     }
@@ -512,25 +610,23 @@ void Application_SpawnEnemy(Application* app, HAL* hal)
 
 void Application_Hit(Application* app, HAL* hal)
 {
-    if (((abs(app->x - app->E_locationx )) < 5)  && ((abs(app->y - app->E_locationy))) < 5)
+    if (((abs((app->x + CENTER) - (app->E_locationx + CENTER))) < 10)  && ((abs((app->y + CENTER)- (app->E_locationy + CENTER) ))) < 10)
     {
         if(app->Health > 0)
         {
             app->Enemy_Active = false;
             app->Health--;
-            Graphics_setForegroundColor(&app->gfx.context, 16777215);
-            Graphics_drawCircle(&app->gfx.context, app->E_locationx, app->E_locationy, 5);
+            Graphics_drawImage(&app->gfx.context, &SpaceshipReset8BPP_UNCOMP, app->E_locationx, app->E_locationy);
             app->E_locationx = 0;
             app->E_locationy = 0;
             app->Enemy--;
         }
     }
-    if (((abs(app->x - app->S_locationx )) < 5)  && ((abs(app->y - app->S_locationy))) < 5)
+    if (((abs((app->x + CENTER) - (app->S_locationx + CENTER) )) < 8)  && ((abs((app->y + CENTER) - (app->S_locationy + CENTER)))) < 8)
     {
         app->ShieldPack_Active = false;
         app->Shield++;
-        Graphics_setForegroundColor(&app->gfx.context, 16777215);
-        Graphics_drawCircle(&app->gfx.context, app->S_locationx, app->S_locationy, 5);
+        Graphics_drawImage(&app->gfx.context, &SpaceshipReset8BPP_UNCOMP, app->S_locationx, app->S_locationy);
         app->S_locationx = 0;
         app->S_locationy = 0;
         app->shield_Pack--;
@@ -539,14 +635,30 @@ void Application_Hit(Application* app, HAL* hal)
     if (((abs(app->x - app->E_locationx )) < 25)  && ((abs(app->y - app->E_locationy))) < 25 && (app->Shield_Active == true))
     {
         app->Score++;
-        Graphics_setForegroundColor(&app->gfx.context, 16777215);
-        Graphics_drawCircle(&app->gfx.context, app->E_locationx, app->E_locationy, 5);
+        Graphics_drawImage(&app->gfx.context, &SpaceshipReset8BPP_UNCOMP, app->E_locationx, app->E_locationy);
         app->E_locationx = 0;
         app->E_locationy = 0;
         app->Enemy--;
         app->Enemy_Active = false;
     }
-
+    if(((abs(app->x- app->E_locationx)) < 25) && ((abs(app->y - app->E_locationy))) < 120 && (app->SpecialAttack_Active == true))
+    {
+        app->Score++;
+        Graphics_drawImage(&app->gfx.context, &SpaceshipReset8BPP_UNCOMP, app->E_locationx, app->E_locationy);
+        app->E_locationx = 0;
+        app->E_locationy = 0;
+        app->Enemy--;
+        app->Enemy_Active = false;
+    }
+    if(((abs(app->x- app->E_locationx)) < 120) && ((abs(app->y - app->E_locationy))) < 25 && (app->SpecialAttack2_Active == true))
+     {
+         app->Score++;
+         Graphics_drawImage(&app->gfx.context, &SpaceshipReset8BPP_UNCOMP, app->E_locationx, app->E_locationy);
+         app->E_locationx = 0;
+         app->E_locationy = 0;
+         app->Enemy--;
+         app->Enemy_Active = false;
+     }
 }
 void Application_Death(Application* app, HAL* hal)
 {
