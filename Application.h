@@ -17,12 +17,19 @@ enum _START_SCREEN
 };
 typedef enum _START_SCREEN startScreen;
 
+enum _DIFFICULTY
+{
+    DIFF0, DIFF1, NUM_DIFF_CHOICES
+};
+typedef enum _DIFFICULTY difficulty;
+
 struct _Application
 {
 
     // Put your application members and FSM state variables here!
     // =========================================================================
     startScreen MenuChoice;
+    difficulty DiffChoice;
     bool firstCall;
 
     //The Graphics Structure
@@ -56,7 +63,10 @@ struct _Application
     int S_locationy;
     int E_locationx;
     int E_locationy;
+    int E_locationxold;
+    int E_locationyold;
     int game_Counter;
+
 
 
 
@@ -123,6 +133,8 @@ void Application_SpecialAttack2On(Application* app, HAL* hal);
 
 void Application_SpecialAttack2Off(Application* app, HAL* hal);
 
+void Application_ChangeDifficulty(Application* app, HAL* hal);
 
+void Application_HowtoPlay(Application* app, HAL* hal);
 
 #endif /* APPLICATION_H_ */

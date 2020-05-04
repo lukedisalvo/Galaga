@@ -16,13 +16,20 @@
 
 #define XMAX 108
 #define XMIN 3
-#define YMIN 20
-#define YMAX 100
+#define YMIN 17
+#define YMAX 97
 #define MOVESPEEDMAX 3
 #define MOVESPEEDMED 2
 #define MOVESPEEDLOW 1
 #define CENTER 8
-
+#define CONFINER 1
+#define UPPERLIMIT 21000
+#define MIDDLELIMIT 10500
+#define SHIELDRANGE 25
+#define ENEMYRANGE 10
+#define SPECIALMAX 120
+#define SPECIALMIN 25
+#define SHIELDPACKRANGE 8
 
 extern tImage GrimReaper8BPP_UNCOMP;
 extern tImage Spaceshipone8BPP_UNCOMP;
@@ -33,6 +40,7 @@ extern tImage Enemyone8BPP_UNCOMP;
 extern tImage Enemytwo8BPP_UNCOMP;
 extern tImage Enemythree8BPP_UNCOMP;
 extern tImage TitleScreen8BPP_UNCOMP;
+extern tImage Reset8BPP_UNCOMP;
 
 /**
  * The main entry point of your project. The main function should immediately
@@ -98,6 +106,7 @@ Application Application_construct()
 
     // Initialize local application state variables here!
     app.MenuChoice = PLAY_GAME;
+    app.DiffChoice = DIFF0;
     app.firstCall = true;
     app.gfx = GFX_construct(GRAPHICS_COLOR_BLACK, GRAPHICS_COLOR_BLACK);
 
@@ -112,7 +121,6 @@ Application Application_construct()
 
     app.state = 0;
     app.Health = 3;
-    app.Diff = 0;
     app.Score = 0;
     app.Shield = 0;
     app.back = 0;
@@ -122,6 +130,8 @@ Application Application_construct()
     app.Enemy = 0;
     app.E_locationx = 0;
     app.E_locationy = 0;
+    app.E_locationxold = 0;
+    app.E_locationyold = 0;
     app.S_locationx = 0;
     app.S_locationy = 0;
     app.Highscore1 = 0;
@@ -212,9 +222,7 @@ void Application_loop(Application* app, HAL* hal)
     //how to play
     else if(app->state == 3)
     {
-        Graphics_drawString(&app->gfx.context, "How to Play", -1, 0, 0, false);
-        Graphics_drawString(&app->gfx.context, "---------------------------", -1, 0, 10, false);
-        Graphics_drawString(&app->gfx.context, "Ya do stuff", -1, 20, 20, false);
+        Application_HowtoPlay(app, hal);
         if (Button_isTapped(&hal->boosterpackJS))
         {
             Application_returnHome(app, hal);
@@ -233,6 +241,7 @@ void Application_loop(Application* app, HAL* hal)
 
 
     }
+    //Game over screen
     else if (app->state == 5)
     {
         Application_Death(app, hal);
@@ -240,6 +249,8 @@ void Application_loop(Application* app, HAL* hal)
 
 }
 
+//Application_Mainmenu draws the ">" that points to what state the player can choose.
+//It also includes a FSM for when the joystick is tapped up or down the > will move with it.
 void Application_Mainmenu(Application* app, HAL* hal)
 {
     uint32_t newMenu;
@@ -282,6 +293,8 @@ void Application_Mainmenu(Application* app, HAL* hal)
 
 }
 
+//Application_Game draws the boundaries of the playing field and draws the health, difficulty
+//score, and shield points. It also includes all of the supporting functions that make the game work.
 void Application_Game(Application* app, HAL* hal)
 {
     char health[10];
@@ -307,15 +320,20 @@ void Application_Game(Application* app, HAL* hal)
     Application_SpawnShield(app, hal);
     Application_SpawnEnemy(app, hal);
     Application_Hit(app, hal);
+    Application_ChangeDifficulty(app, hal);
 
 }
 
+//Application_returnHome brings the player to the main screen
 void Application_returnHome(Application* app, HAL* hal)
 {
     Graphics_clearDisplay(&app->gfx.context);
     app->state = 1;
 }
 
+//Applicaiton_changeScreen allows the player to choose which of the three states the game can be in.
+//When the joystick is pressed, the player will go to the Play game, How to Play or Highscores state, depending
+//on where the ">" is located.
 void Application_changeScreen(Application* app, HAL* hal)
 {
     if(Button_isTapped(&hal->boosterpackJS))
@@ -345,6 +363,8 @@ void Application_changeScreen(Application* app, HAL* hal)
 
 }
 
+//Application_moveCharacter allows for the movement of the character in the game. It also supports
+//the movement of both the shield attack and special attack that I implemented.
 void Application_moveCharacter(Application* app, HAL* hal)
 {
     app->x_old = app->x;
@@ -453,7 +473,7 @@ void Application_moveCharacter(Application* app, HAL* hal)
     {
         Application_ShieldOff(app, hal);
     }
-    if(Button_isTapped(&hal->boosterpackS1) && app->Shield >= 2)
+    if(Button_isPressed(&hal->boosterpackJS) && app->Shield >= 2)
     {
         Application_SpecialAttackOn(app, hal);
     }
@@ -496,6 +516,8 @@ void Application_moveCharacter(Application* app, HAL* hal)
 
 }
 
+//Application_SpawnShield generates a shield pack every 5 seconds if there is not already a shield pack
+//in the game
 void Application_SpawnShield(Application* app, HAL* hal)
 {
     if(SWTimer_expired(&app->Game_Timer) && app->shield_Pack == 0 && app->ShieldPack_Active == false)
@@ -505,8 +527,8 @@ void Application_SpawnShield(Application* app, HAL* hal)
         int LowerX = XMIN;
         int UpperY = YMAX;
         int LowerY = YMIN;
-        int numX = (rand() % (UpperX - LowerX + 1)) + LowerX;
-        int numY = (rand() % (UpperY - LowerY + 1)) + LowerY;
+        int numX = (rand() % (UpperX - LowerX + CONFINER)) + LowerX;
+        int numY = (rand() % (UpperY - LowerY + CONFINER)) + LowerY;
         app->S_locationx = numX;
         app->S_locationy = numY;
         Graphics_drawImage(&app->gfx.context, &Shield8BPP_UNCOMP, app->S_locationx, app->S_locationy);
@@ -516,6 +538,7 @@ void Application_SpawnShield(Application* app, HAL* hal)
 
 }
 
+//Application_ShieldOn activates the shield
 void Application_ShieldOn(Application* app, HAL* hal)
 {
     SWTimer_start(&app->Shield_Timer);
@@ -524,6 +547,7 @@ void Application_ShieldOn(Application* app, HAL* hal)
     app->Stop_Attack = true;
 
 }
+//Application_ShieldOff deactivates the shield
 void Application_ShieldOff(Application* app, HAL* hal)
 {
     app->Shield_Active = false;
@@ -534,7 +558,7 @@ void Application_ShieldOff(Application* app, HAL* hal)
     }
     app->Stop_Attack = false;
 }
-
+//Application_SpecialAttackOn activates the first part of the special attack
 void Application_SpecialAttackOn(Application* app, HAL* hal)
 {
     SWTimer_start(&app->Special_Attack);
@@ -543,13 +567,14 @@ void Application_SpecialAttackOn(Application* app, HAL* hal)
     app->Shield--;
     app->Stop_SpecialAttack = true;
 }
+//Application_SpecialAttack2On activates the second part of the special attack
 void Application_SpecialAttack2On(Application* app, HAL* hal)
 {
     SWTimer_start(&app->attack);
     app->SpecialAttack2_Active = true;
     app->Stop_SpecialAttack2 = true;
 }
-
+//Application_SpecialAttack2Off  deactivates the first part of the special attack
 void Application_SpecialAttackOff(Application* app, HAL* hal)
 {
     app->SpecialAttack_Active = false;
@@ -561,6 +586,7 @@ void Application_SpecialAttackOff(Application* app, HAL* hal)
     }
     app->Stop_SpecialAttack = false;
 }
+//Application_SpecialAttack2Off  deactivates the second part of the special attack
 void Application_SpecialAttack2Off(Application* app, HAL* hal)
 {
     app->SpecialAttack2_Active = false;
@@ -573,22 +599,55 @@ void Application_SpecialAttack2Off(Application* app, HAL* hal)
     app->Stop_SpecialAttack2 = false;
 }
 
-
+//Application_SpawnEnemy generates a enemy every 3 seconds if there is not already a enemy
+//in the game
 void Application_SpawnEnemy(Application* app, HAL* hal)
 {
     tImage Image;
     int x = rand();
-    if(x > 21000)
+    if(x > UPPERLIMIT)
     {
         Image = Enemyone8BPP_UNCOMP;
     }
-    else if (x < 21000 && x > 10500)
+    else if (x < UPPERLIMIT && x > MIDDLELIMIT)
     {
         Image = Enemytwo8BPP_UNCOMP;
     }
     else
     {
         Image = Enemythree8BPP_UNCOMP;
+    }
+
+    app->E_locationxold = app->E_locationx;
+    app->E_locationyold = app->E_locationy;
+    if (app->Enemy == 1  && app->Diff == 1)
+    {
+        if (app->x < app->E_locationx)
+        {
+            app->E_locationx = app->E_locationx - MOVESPEEDLOW;
+            Graphics_drawImage(&app->gfx.context, &Reset8BPP_UNCOMP,app->E_locationxold, app->E_locationyold);
+            Graphics_drawImage(&app->gfx.context, &Enemyone8BPP_UNCOMP, app->E_locationx, app->E_locationy);
+
+        }
+        else if (app->x > app->E_locationx)
+        {
+            app->E_locationx = app->E_locationx + MOVESPEEDLOW;
+            Graphics_drawImage(&app->gfx.context, &Reset8BPP_UNCOMP, app->E_locationxold, app->E_locationyold);
+            Graphics_drawImage(&app->gfx.context, &Enemyone8BPP_UNCOMP, app->E_locationx,app->E_locationy);
+
+        }
+        if (app->y < app->E_locationy)
+        {
+            app->E_locationy = app->E_locationy - MOVESPEEDLOW;
+            Graphics_drawImage(&app->gfx.context, &Reset8BPP_UNCOMP, app->E_locationxold, app->E_locationyold);
+            Graphics_drawImage(&app->gfx.context, &Enemyone8BPP_UNCOMP, app->E_locationx,app->E_locationy);
+        }
+        else if (app->y > app->E_locationy)
+        {
+            app->E_locationy = app->E_locationy + MOVESPEEDLOW;
+            Graphics_drawImage(&app->gfx.context, &Reset8BPP_UNCOMP,app->E_locationxold, app->E_locationyold);
+            Graphics_drawImage(&app->gfx.context, &Enemyone8BPP_UNCOMP, app->E_locationx, app->E_locationy);
+        }
     }
     if(SWTimer_expired(&app->Enemy_Spawn) && app->Enemy == 0 && app->Enemy_Active == false)
     {
@@ -597,8 +656,8 @@ void Application_SpawnEnemy(Application* app, HAL* hal)
         int LowerX = XMIN;
         int UpperY = YMAX;
         int LowerY = YMIN;
-        int numX = (rand() % (UpperX - LowerX + 1)) + LowerX;
-        int numY = (rand() % (UpperY - LowerY + 1)) + LowerY;
+        int numX = (rand() % (UpperX - LowerX + CONFINER)) + LowerX;
+        int numY = (rand() % (UpperY - LowerY + CONFINER)) + LowerY;
         app->E_locationx = numX;
         app->E_locationy = numY;
         Graphics_drawImage(&app->gfx.context, &Image, app->E_locationx, app->E_locationy);
@@ -608,9 +667,11 @@ void Application_SpawnEnemy(Application* app, HAL* hal)
 
 }
 
+//Application_Hit determines if the character was hit by an enemy. It also determines if an enemy was hit by
+//a shield or a special atatck.
 void Application_Hit(Application* app, HAL* hal)
 {
-    if (((abs((app->x + CENTER) - (app->E_locationx + CENTER))) < 10)  && ((abs((app->y + CENTER)- (app->E_locationy + CENTER) ))) < 10)
+    if (((abs((app->x + CENTER) - (app->E_locationx + CENTER))) < ENEMYRANGE)  && ((abs((app->y + CENTER)- (app->E_locationy + CENTER) ))) < ENEMYRANGE)
     {
         if(app->Health > 0)
         {
@@ -622,7 +683,7 @@ void Application_Hit(Application* app, HAL* hal)
             app->Enemy--;
         }
     }
-    if (((abs((app->x + CENTER) - (app->S_locationx + CENTER) )) < 8)  && ((abs((app->y + CENTER) - (app->S_locationy + CENTER)))) < 8)
+    if (((abs((app->x + CENTER) - (app->S_locationx + CENTER) )) < SHIELDPACKRANGE)  && ((abs((app->y + CENTER) - (app->S_locationy + CENTER)))) < SHIELDPACKRANGE)
     {
         app->ShieldPack_Active = false;
         app->Shield++;
@@ -632,7 +693,7 @@ void Application_Hit(Application* app, HAL* hal)
         app->shield_Pack--;
 
     }
-    if (((abs(app->x - app->E_locationx )) < 25)  && ((abs(app->y - app->E_locationy))) < 25 && (app->Shield_Active == true))
+    if (((abs(app->x - app->E_locationx )) < SHIELDRANGE)  && ((abs(app->y - app->E_locationy))) < SHIELDRANGE && (app->Shield_Active == true))
     {
         app->Score++;
         Graphics_drawImage(&app->gfx.context, &SpaceshipReset8BPP_UNCOMP, app->E_locationx, app->E_locationy);
@@ -641,7 +702,7 @@ void Application_Hit(Application* app, HAL* hal)
         app->Enemy--;
         app->Enemy_Active = false;
     }
-    if(((abs(app->x- app->E_locationx)) < 25) && ((abs(app->y - app->E_locationy))) < 120 && (app->SpecialAttack_Active == true))
+    if(((abs(app->x- app->E_locationx)) < SPECIALMIN) && ((abs(app->y - app->E_locationy))) < SPECIALMAX && (app->SpecialAttack_Active == true))
     {
         app->Score++;
         Graphics_drawImage(&app->gfx.context, &SpaceshipReset8BPP_UNCOMP, app->E_locationx, app->E_locationy);
@@ -650,7 +711,7 @@ void Application_Hit(Application* app, HAL* hal)
         app->Enemy--;
         app->Enemy_Active = false;
     }
-    if(((abs(app->x- app->E_locationx)) < 120) && ((abs(app->y - app->E_locationy))) < 25 && (app->SpecialAttack2_Active == true))
+    if(((abs(app->x- app->E_locationx)) < SPECIALMAX) && ((abs(app->y - app->E_locationy))) < SPECIALMIN && (app->SpecialAttack2_Active == true))
      {
          app->Score++;
          Graphics_drawImage(&app->gfx.context, &SpaceshipReset8BPP_UNCOMP, app->E_locationx, app->E_locationy);
@@ -660,6 +721,8 @@ void Application_Hit(Application* app, HAL* hal)
          app->Enemy_Active = false;
      }
 }
+//Application_Death occurs when the players health is 0. The game will clear and show your score.
+//It also support logics to go back to the main screen and reset the game by pressing the joystick.
 void Application_Death(Application* app, HAL* hal)
 {
 
@@ -676,15 +739,17 @@ void Application_Death(Application* app, HAL* hal)
     }
 }
 
+//Application_ResetGame resets all of the past game values to its orginal starting values
 void Application_ResetGame(Application* app, HAL* hal)
 {
+    app->DiffChoice = DIFF0;
     app->Health = 3;
     app->Diff = 0;
     app->Score = 0;
     app->Shield = 0;
     app->back = 0;
-    app->x = 63;
-    app->y = 63;
+    app->x = 55;
+    app->y = 55;
     app->shield_Pack = 0;
     app->Enemy = 0;
     app->E_locationx = 0;
@@ -696,7 +761,7 @@ void Application_ResetGame(Application* app, HAL* hal)
     app->Enemy_Active = false;
     app->ShieldPack_Active = false;
 }
-
+//Application_HighScores draws everything that is seen in the High Score menu and print all of the high scores.
 void Application_HighScores(Application* app, HAL* hal)
 {
 
@@ -736,6 +801,8 @@ void Application_HighScores(Application* app, HAL* hal)
     Graphics_drawString(&app->gfx.context, "To main menu: JS ", -1, 20, 70, false);
 }
 
+//Aplication_HighScoreChecker supports logic that determines whether the players score is high enough to be on the
+//High score menu.
 void Application_HighScoreChecker(Application* app, HAL* hal)
 {
     static int Highscore[5] = {0,0,0,0,0};
@@ -760,3 +827,40 @@ void Application_HighScoreChecker(Application* app, HAL* hal)
     app->Highscore5 = Highscore[4];
 }
 
+//Application_ChangeDifficulty changes the difficulty when boosterpack button S1 is pressed
+void Application_ChangeDifficulty(Application* app, HAL* hal)
+{
+    uint32_t newDiff;
+    if (Button_isTapped(&hal->boosterpackS1))
+    {
+        newDiff = CircularIncrement((uint32_t) app->DiffChoice, NUM_DIFF_CHOICES);
+        app->DiffChoice = (difficulty) newDiff;
+    }
+    switch(app->DiffChoice)
+    {
+        case DIFF0:
+            app->Diff = 0;
+            break;
+        case DIFF1:
+            app->Diff = 1;
+            break;
+    }
+}
+
+//Application_HowtoPlay draws the strings that tell the user how to play the game.
+void Application_HowtoPlay(Application* app, HAL* hal)
+{
+    Graphics_drawString(&app->gfx.context, "How to Play", -1, 0, 0, false);
+    Graphics_drawString(&app->gfx.context, "---------------------------", -1, 0, 10, false);
+    Graphics_drawString(&app->gfx.context, "Avoid all the aliens!", -1, 0, 20, false);
+    Graphics_drawString(&app->gfx.context, "Pick up blue shields", -1, 0, 30, false);
+    Graphics_drawString(&app->gfx.context, "to gain ammo (P).", -1, 0, 40, false);
+    Graphics_drawString(&app->gfx.context, "Press B2 to gain a", -1, 0, 50, false);
+    Graphics_drawString(&app->gfx.context, "temporary shield.", -1, 0, 60, false);
+    Graphics_drawString(&app->gfx.context, "Save up 2 P and ", -1, 0, 70, false);
+    Graphics_drawString(&app->gfx.context, "press the joystick", -1, 0, 80, false);
+    Graphics_drawString(&app->gfx.context, "for a special attack.", -1, 0, 90, false);
+    Graphics_drawString(&app->gfx.context, "Defeating aliens ", -1, 0, 100, false);
+    Graphics_drawString(&app->gfx.context, "increases your score.", -1, 0, 110, false);
+    Graphics_drawString(&app->gfx.context, "To main menu: JS", -1, 0, 120, false);
+}
